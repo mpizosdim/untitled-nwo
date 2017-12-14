@@ -7,21 +7,15 @@ import pandas as pd
 
 
 class CNNsequantial(object):
-    def __init__(self, file_to_save, seq=True, dropout=0.2, learning_rate=0.001):
+    def __init__(self, file_to_save, dropout=0.2, learning_rate=0.001):
         self.dropout = dropout
         self.learning_rate = learning_rate
         self.file_to_save = file_to_save
-        if seq:
-            self.gmodel = self.getModel_seq()
-        else:
-            self.gmodel = self.getModel_func()
+        self.gmodel = self.getModel()
         self.callbacks = self.get_callbacks()
         self.history = None
 
-    def getModel_func(self):
-        pass
-
-    def getModel_seq(self):
+    def getModel(self):
         # Building the model
         gmodel = Sequential()
         # Conv Layer 1
