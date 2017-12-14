@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Flatten, Activation
+from keras.models import Model
+from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Flatten, Activation, Input
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 import pandas as pd
@@ -16,44 +16,48 @@ class CNNsequantial(object):
         self.history = None
 
     def getModel(self):
-        # Building the model
-        gmodel = Sequential()
-        # Conv Layer 1
-        gmodel.add(Conv2D(64, kernel_size=(3, 3), activation='relu', input_shape=(75, 75, 3)))
-        gmodel.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
-        gmodel.add(Dropout(self.dropout))
-
+        input_image = Input(shape=(75, 75, 3,), name='inp_images')
+        #conv 1
+        x1 = Conv2D(64, kernel_size=(3, 3), activation='relu')(input_image)
+        x1 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(x1)
+        x1 = Dropout(self.dropout)(x1)
+        #conv2
         # Conv Layer 2
-        gmodel.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-        gmodel.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-        gmodel.add(Dropout(self.dropout))
+        x2 = Conv2D(128, kernel_size=(3, 3), activation='relu')(x1)
+        x2 = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x2)
+        x2 = Dropout(self.dropout)(x2)
 
         # Conv Layer 3
-        gmodel.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-        gmodel.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-        gmodel.add(Dropout(self.dropout))
+        x3 = Conv2D(128, kernel_size=(3, 3), activation='relu')(x2)
+        x3 = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x3)
+        x3 = Dropout(self.dropout)(x3)
 
         # Conv Layer 4
-        gmodel.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-        gmodel.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-        gmodel.add(Dropout(self.dropout))
+        x4 = Conv2D(64, kernel_size=(3, 3), activation='relu')(x3)
+        x4 = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x4)
+        x4 = Dropout(self.dropout)(x4)
 
         # Flatten the data for upcoming dense layers
-        gmodel.add(Flatten())
+        x4 = Flatten()(x4)
 
         # Dense Layers
-        gmodel.add(Dense(512))
-        gmodel.add(Activation('relu'))
-        gmodel.add(Dropout(self.dropout))
+        x5 = Dense(512)(x4)
+        x5 = Activation('relu')(x5)
+        x5 = Dropout(self.dropout)(x5)
 
         # Dense Layer 2
-        gmodel.add(Dense(256))
-        gmodel.add(Activation('relu'))
-        gmodel.add(Dropout(self.dropout))
+        x6 = Dense(256)(x5)
+        x6 = Activation('relu')(x6)
+        x6 = Dropout(self.dropout)(x6)
 
         # Sigmoid Layer
-        gmodel.add(Dense(1))
-        gmodel.add(Activation('sigmoid'))
+        x7 = Dense(1)(x6)
+        output = Activation('sigmoid')(x7)
+
+        gmodel = Model(
+            inputs=[input_image],
+            outputs=[output]
+        )
 
         mypotim = Adam(lr=self.learning_rate)
         gmodel.compile(loss='binary_crossentropy', optimizer=mypotim, metrics=['accuracy'])
