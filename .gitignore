@@ -100,5 +100,9 @@ ENV/
 # mypy
 .mypy_cache/
 
+# personal files
 data/
 *.ipynb
+*.hdf5
+report.Rmd
+*.csv
