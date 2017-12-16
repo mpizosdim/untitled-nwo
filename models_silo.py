@@ -6,11 +6,12 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 import pandas as pd
 
 
-class CNNsequantial(object):
-    def __init__(self, file_to_save, dropout=0.2, learning_rate=0.001):
+class CNNfunctional(object):
+    def __init__(self, file_to_save, dropout=0.2, learning_rate=0.001, verbose=True):
         self.dropout = dropout
         self.learning_rate = learning_rate
         self.file_to_save = file_to_save
+        self.verbose = verbose
         self.gmodel = self.getModel()
         self.callbacks = self.get_callbacks()
         self.history = None
@@ -61,7 +62,8 @@ class CNNsequantial(object):
 
         mypotim = Adam(lr=self.learning_rate)
         gmodel.compile(loss='binary_crossentropy', optimizer=mypotim, metrics=['accuracy'])
-        gmodel.summary()
+        if self.verbose:
+            gmodel.summary()
         return gmodel
 
     def get_callbacks(self, patience=5):
@@ -69,17 +71,29 @@ class CNNsequantial(object):
         msave = ModelCheckpoint(self.file_to_save, save_best_only=True)
         return [es, msave]
 
-    def fit_model(self, x_train, y_train, x_valid, y_valid, batch_size=24, epochs=50):
-        self.history = self.gmodel.fit(x_train, y_train,
-                                       batch_size=batch_size,
-                                       epochs=epochs,
-                                       verbose=1,
-                                       validation_data=(x_valid, y_valid),
-                                       callbacks=self.callbacks)
+    def fit_model(self, x_train, y_train, x_valid, y_valid, batch_size=24, epochs=50, generator=False):
+        if generator:
+            self.history = self.gmodel.fit_generator(generator.flow(x_train, y_train, batch_size=batch_size),
+                                                     steps_per_epoch=len(x_train)/batch_size,
+                                                     epochs=epochs,
+                                                     validation_data=generator.flow(x_train, y_train, batch_size=batch_size),
+                                                     validation_steps=len(y_valid)/batch_size)
+        else:
+            self.history = self.gmodel.fit(x_train, y_train,
+                                           batch_size=batch_size,
+                                           epochs=epochs,
+                                           verbose=1,
+                                           validation_data=(x_valid, y_valid),
+                                           callbacks=self.callbacks)
 
-    def evaluate_model(self, x, y):
+    def evaluate_model(self, x, y, generator=False, batch_size=24):
         self.gmodel.load_weights(filepath=self.file_to_save)
-        score = self.gmodel.evaluate(x, y, verbose=1)
+        if generator:
+            score = self.gmodel.evaluate_generator(generator.flow(x, y, batch_size=batch_size),
+                                                   len(x)/batch_size)
+        else:
+            score = self.gmodel.evaluate(x, y, verbose=1)
+
         print('Test loss:', score[0])
         print('Test accuracy:', score[1])
         fig = plt.figure()
@@ -99,13 +113,16 @@ class CNNsequantial(object):
         plt.legend(['train', 'test'], loc='upper right')
         plt.show()
 
-    def predict_from_model_and_write(self, x, ids=None, write_file=None):
-        predicted_test = self.gmodel.predict_proba(x)
+    def predict_from_model_and_write(self, x, ids=None, write_file=None, uplim=None, downlim=None):
+        self.gmodel.load_weights(filepath=self.file_to_save)
+        predicted_test = self.gmodel.predict(x)
+        if uplim:
+            predicted_test[predicted_test > uplim] = 1.0
+        if downlim:
+            predicted_test[predicted_test < downlim] = 0.0
         if write_file:
             submission = pd.DataFrame()
             submission['id'] = ids
             submission['is_iceberg'] = predicted_test.reshape((predicted_test.shape[0]))
             submission.to_csv(write_file, index=False)
         return predicted_test
-
-
